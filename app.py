@@ -231,7 +231,7 @@ def display_movie_recommendations(recommendations):
                 st.markdown(f"<p style='text-align: center;'>Genre: {movie['genre']}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p style='text-align: center;'>{movie['description'][:150]}...</p>", unsafe_allow_html=True)
     else:
-        st.markdown("<p style='text-align: center;'>Tidak ditemukan film yang sesuai. Coba kata kunci lain!</p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center;'>Wah tidak ditemukan film yang serupa, coba film lain!</p>", unsafe_allow_html=True)
 
 def main():
     col1, col2, col3 = st.columns([2,1,2])    
