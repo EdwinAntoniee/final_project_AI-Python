@@ -59,7 +59,7 @@ def load_movie_data():
     except Exception as e:
         st.error(f"Error tidak terduga saat memuat dataset: {str(e)}")
         return pd.DataFrame(columns=required_columns)
-
+    
 def get_mood_from_openrouter(text):
     API_URL = "https://openrouter.ai/api/v1/chat/completions"
     API_KEY = "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"
@@ -69,36 +69,22 @@ def get_mood_from_openrouter(text):
         "HTTP-Referer": "http://localhost:8501",
         "OpenRouter-Marketplace": "true"
     }
-    text_lower = text.lower()
-    keyword_mapping = {
-        'bosan': ['bosan', 'jenuh', 'monoton', 'capek', 'rutinitas'],
-        'sedih': ['sedih', 'galau', 'kecewa', 'murung', 'patah hati'],
-        'senang': ['senang', 'bahagia', 'gembira', 'suka', 'ceria'],
-        'semangat': ['semangat', 'antusias', 'energik', 'excited'],
-        'takut': ['takut', 'cemas', 'khawatir', 'ngeri'],
-        'penasaran': ['penasaran', 'ingin tahu', 'curious'],
-        'marah': ['marah', 'kesal', 'jengkel', 'emosi'],
-        'cinta': ['cinta', 'sayang', 'romantis', 'love'],
-        'tegang': ['tegang', 'stress', 'tertekan', 'pressure']
-    }
-
-    for mood, keywords in keyword_mapping.items():
-        if any(keyword in text_lower for keyword in keywords):
-            return mood
-            
-    prompt = f"""Analisis mood dari teks berikut ini. Pilih satu mood yang paling tepat:
-    bosan = jika terkait kebosanan, kejenuhan, rutinitas
-    sedih = jika terkait kesedihan, kekecewaan
-    senang = jika terkait kebahagiaan, keceriaan
-    semangat = jika terkait antusiasme, energi
-    takut = jika terkait ketakutan, kecemasan
-    penasaran = jika terkait rasa ingin tahu
-    marah = jika terkait kemarahan, kejengkelan
-    cinta = jika terkait perasaan romantis
-    tegang = jika terkait ketegangan, stress
-    Berikan jawaban dalam satu kata saja.
+    
+    # More focused sentiment analysis prompt
+    prompt = f"""Analisis sentiment dan emosi dari teks berikut dengan mendalam. 
+    Jika mengandung kelelahan, kejenuhan, atau rutinitas = bosan
+    Jika mengandung kesedihan atau kekecewaan = sedih
+    Jika mengandung kebahagiaan atau keceriaan = senang
+    Jika mengandung semangat atau antusiasme = semangat
+    Jika mengandung ketakutan atau kecemasan = takut
+    Jika mengandung rasa ingin tahu = penasaran
+    Jika mengandung kemarahan = marah
+    Jika mengandung perasaan romantis = cinta
+    Jika mengandung ketegangan atau stress = tegang
+    
+    Berikan satu kata yang paling tepat menggambarkan emosi dominan.
     Teks: {text}
-    Mood:"""
+    Emosi:"""
     
     try:
         response = requests.post(
@@ -107,28 +93,26 @@ def get_mood_from_openrouter(text):
             json={
                 "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",
                 "messages": [
-                    {"role": "system", "content": "Kamu adalah ahli analisis emosi yang memerhatikan input teks dari pengguna, dari teks yang kamu terima kamu dapat menyimpulkan emosi dari pengguna dengan satu kata."},
+                    {"role": "system", "content": "Kamu adalah ahli analisis sentiment dan emosi yang sangat teliti dalam menganalisis nuansa emosi dari teks."},
                     {"role": "user", "content": prompt}
                 ],
                 "max_tokens": 10,
-                "temperature": 0.1,
+                "temperature": 0.3,  # Lower temperature for more consistent results
                 "stop": ["\n", ".", ",", "!", "?"]
             }
         )
         if response.status_code == 200:
             result = response.json()
             mood = result['choices'][0]['message']['content'].strip().lower()
-            if mood in keyword_mapping:
+            valid_moods = ['bosan', 'sedih', 'senang', 'semangat', 'takut', 
+                          'penasaran', 'marah', 'cinta', 'tegang']
+            if mood in valid_moods:
                 return mood
-            for valid_mood in keyword_mapping.keys():
-                if valid_mood in mood:
-                    return valid_mood
+            return 'bosan'
     except Exception as e:
         st.warning(f"Error saat menganalisis mood: {str(e)}")
-        
-    default_moods = ['senang', 'semangat', 'penasaran']  
-    import random
-    return random.choice(default_moods)
+    
+    return 'bosan'  
 
 def classify_text_to_genre(text):
     mood_mapping = {
