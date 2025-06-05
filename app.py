@@ -105,7 +105,7 @@ def get_mood_from_openrouter(text):
             API_URL,
             headers=headers,
             json={
-                "model": "mistralai/mistral-7b-instruct",
+                "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",
                 "messages": [
                     {"role": "system", "content": "Kamu adalah ahli analisis emosi yang selalu memberikan jawaban singkat satu kata."},
                     {"role": "user", "content": prompt}
