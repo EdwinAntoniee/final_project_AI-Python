@@ -70,22 +70,24 @@ def get_mood_from_openrouter(text):
         "OpenRouter-Marketplace": "true"
     }
     
-    # More focused sentiment analysis prompt
-    prompt = f"""Analisis sentiment dan emosi dari teks berikut dengan mendalam. 
-    Jika mengandung kelelahan, kejenuhan, atau rutinitas = bosan
-    Jika mengandung kesedihan atau kekecewaan = sedih
-    Jika mengandung kebahagiaan atau keceriaan = senang
-    Jika mengandung semangat atau antusiasme = semangat
-    Jika mengandung ketakutan atau kecemasan = takut
-    Jika mengandung rasa ingin tahu = penasaran
-    Jika mengandung kemarahan = marah
-    Jika mengandung perasaan romantis = cinta
-    Jika mengandung ketegangan atau stress = tegang
-    
-    Berikan satu kata yang paling tepat menggambarkan emosi dominan.
-    Teks: {text}
-    Emosi:"""
-    
+    # Improved sentiment analysis prompt with better context
+    prompt = f"""Analisis emosi dominan dari teks berikut dengan sangat teliti:
+
+Panduan analisis:
+- bosan = hanya jika secara eksplisit menyebut bosan/jenuh
+- lelah/capek = tegang
+- sedih = untuk kesedihan, kekecewaan, atau patah hati
+- senang = untuk kebahagiaan, keceriaan, atau euphoria
+- semangat = untuk antusiasme atau motivasi tinggi
+- takut = untuk ketakutan atau kecemasan
+- penasaran = untuk rasa ingin tahu
+- marah = untuk kemarahan atau frustrasi
+- cinta = untuk perasaan romantis atau kasih sayang
+- tegang = untuk stress, tekanan, atau kelelahan
+
+Teks: {text}
+Emosi dominan (pilih satu kata):"""
+
     try:
         response = requests.post(
             API_URL,
@@ -93,12 +95,11 @@ def get_mood_from_openrouter(text):
             json={
                 "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",
                 "messages": [
-                    {"role": "system", "content": "Kamu adalah ahli analisis sentiment dan emosi yang sangat teliti dalam menganalisis nuansa emosi dari teks."},
+                    {"role": "system", "content": "Kamu adalah ahli psikologi dengan spesialisasi analisis emosi. Berikan analisis yang akurat dan spesifik."},
                     {"role": "user", "content": prompt}
                 ],
                 "max_tokens": 10,
-                "temperature": 0.3,  # Lower temperature for more consistent results
-                "stop": ["\n", ".", ",", "!", "?"]
+                "temperature": 0.2
             }
         )
         if response.status_code == 200:
@@ -108,11 +109,11 @@ def get_mood_from_openrouter(text):
                           'penasaran', 'marah', 'cinta', 'tegang']
             if mood in valid_moods:
                 return mood
-            return 'bosan'
+            return 'senang'  
     except Exception as e:
         st.warning(f"Error saat menganalisis mood: {str(e)}")
     
-    return 'bosan'  
+    return 'senang' 
 
 def classify_text_to_genre(text):
     mood_mapping = {
