@@ -228,7 +228,7 @@ def main():
         st.image("https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZXdpZnhycWQ5dHVxcmo3aTVwb3Byaml0a3V4eWE1dDB6OTZ0b3FmZyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/26DOMQa5Ib2SmaRZm/giphy.gif", 
                  use_container_width=True,
                  caption="CineMatch")
-    st.markdown("<h1 style='text-align: center;'>🎬 CineMatch !</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>🎬 CineMatch</h1>", unsafe_allow_html=True)
     all_genres = ["Action", "Adventure", "Animation", "Comedy", "Crime", 
                  "Drama", "Family", "Fantasy", "Horror", "Mystery",
                  "Romance", "Sci-Fi", "Thriller"]
