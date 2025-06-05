@@ -81,9 +81,11 @@ def get_mood_from_openrouter(text):
         'cinta': ['cinta', 'sayang', 'romantis', 'love'],
         'tegang': ['tegang', 'stress', 'tertekan', 'pressure']
     }
+
     for mood, keywords in keyword_mapping.items():
         if any(keyword in text_lower for keyword in keywords):
             return mood
+            
     prompt = f"""Analisis mood dari teks berikut ini. Pilih satu mood yang paling tepat:
     bosan = jika terkait kebosanan, kejenuhan, rutinitas
     sedih = jika terkait kesedihan, kekecewaan
@@ -97,6 +99,7 @@ def get_mood_from_openrouter(text):
     Berikan jawaban dalam satu kata saja.
     Teks: {text}
     Mood:"""
+    
     try:
         response = requests.post(
             API_URL,
@@ -122,9 +125,11 @@ def get_mood_from_openrouter(text):
                     return valid_mood
     except Exception as e:
         st.warning(f"Error saat menganalisis mood: {str(e)}")
-    if 'capek' in text_lower or 'rutinitas' in text_lower:
-        return 'bosan'
-    return 'bosan'  
+        
+    default_moods = ['senang', 'semangat', 'penasaran']  
+    import random
+    return random.choice(default_moods)
+
 def classify_text_to_genre(text):
     mood_mapping = {
         'senang': ['Comedy', 'Adventure', 'Animation'],
@@ -239,7 +244,7 @@ def main():
         st.image("https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZXdpZnhycWQ5dHVxcmo3aTVwb3Byaml0a3V4eWE1dDB6OTZ0b3FmZyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/26DOMQa5Ib2SmaRZm/giphy.gif", 
                  use_container_width=True,
                  caption="CineMatch")
-    st.markdown("<h1 style='text-align: center;'>🎬 CineMatch</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>🎬 CineMatch !</h1>", unsafe_allow_html=True)
     all_genres = ["Action", "Adventure", "Animation", "Comedy", "Crime", 
                  "Drama", "Family", "Fantasy", "Horror", "Mystery",
                  "Romance", "Sci-Fi", "Thriller"]
