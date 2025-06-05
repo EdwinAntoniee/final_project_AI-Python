@@ -3,16 +3,8 @@ import pandas as pd
 import requests
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
-from transformers import pipeline
 import warnings
 warnings.filterwarnings('ignore')
-
-# Initialize sentiment pipeline globally
-sentiment_pipeline = pipeline(
-    "sentiment-analysis",
-    model="nlptown/bert-base-multilingual-uncased-sentiment",
-    truncation=True
-)
 
 TMDB_API_KEY = "09064ce99d3e0ce44969ac60940cfe5a"
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
@@ -69,47 +61,70 @@ def load_movie_data():
         return pd.DataFrame(columns=required_columns)
 
 def get_mood_from_openrouter(text):
+    API_URL = "https://openrouter.ai/api/v1/chat/completions"
+    API_KEY = "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"
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost:8501",
+        "OpenRouter-Marketplace": "true"
+    }
     text_lower = text.lower()
-    
-    fatigue_terms = ['lelah', 'capek', 'penat', 'letih', 'lesu', 'stress', 'tertekan', 'beban']
-    if any(term in text_lower for term in fatigue_terms):
-        return 'tegang'
-    
+    keyword_mapping = {
+        'bosan': ['bosan', 'jenuh', 'monoton', 'capek', 'rutinitas'],
+        'sedih': ['sedih', 'galau', 'kecewa', 'murung', 'patah hati'],
+        'senang': ['senang', 'bahagia', 'gembira', 'suka', 'ceria'],
+        'semangat': ['semangat', 'antusias', 'energik', 'excited'],
+        'takut': ['takut', 'cemas', 'khawatir', 'ngeri'],
+        'penasaran': ['penasaran', 'ingin tahu', 'curious'],
+        'marah': ['marah', 'kesal', 'jengkel', 'emosi'],
+        'cinta': ['cinta', 'sayang', 'romantis', 'love'],
+        'tegang': ['tegang', 'stress', 'tertekan', 'pressure']
+    }
+    for mood, keywords in keyword_mapping.items():
+        if any(keyword in text_lower for keyword in keywords):
+            return mood
+    prompt = f"""Analisis mood dari teks berikut ini. Pilih satu mood yang paling tepat:
+    bosan = jika terkait kebosanan, kejenuhan, rutinitas
+    sedih = jika terkait kesedihan, kekecewaan
+    senang = jika terkait kebahagiaan, keceriaan
+    semangat = jika terkait antusiasme, energi
+    takut = jika terkait ketakutan, kecemasan
+    penasaran = jika terkait rasa ingin tahu
+    marah = jika terkait kemarahan, kejengkelan
+    cinta = jika terkait perasaan romantis
+    tegang = jika terkait ketegangan, stress
+    Berikan jawaban dalam satu kata saja.
+    Teks: {text}
+    Mood:"""
     try:
-        result = sentiment_pipeline(text)[0]
-        sentiment_score = int(result['label'][0])  
-        
-        if sentiment_score <= 2:
-            if any(word in text_lower for word in ['takut', 'cemas', 'khawatir']):
-                return 'takut'
-            elif any(word in text_lower for word in ['marah', 'kesal', 'jengkel']):
-                return 'marah'
-            elif any(word in text_lower for word in ['bosan', 'jenuh']):
-                return 'bosan'
-            return 'sedih'
-        elif sentiment_score == 3:
-            if any(word in text_lower for word in ['penasaran', 'ingin tahu']):
-                return 'penasaran'
-            elif any(word in text_lower for word in ['cinta', 'sayang', 'rindu']):
-                return 'cinta'
-            return 'bosan'
-        else: 
-            if any(word in text_lower for word in ['semangat', 'antusias']):
-                return 'semangat'
-            return 'senang'
-            
+        response = requests.post(
+            API_URL,
+            headers=headers,
+            json={
+                "model": "mistralai/mistral-7b-instruct",
+                "messages": [
+                    {"role": "system", "content": "Kamu adalah ahli analisis emosi yang selalu memberikan jawaban singkat satu kata."},
+                    {"role": "user", "content": prompt}
+                ],
+                "max_tokens": 10,
+                "temperature": 0.1,
+                "stop": ["\n", ".", ",", "!", "?"]
+            }
+        )
+        if response.status_code == 200:
+            result = response.json()
+            mood = result['choices'][0]['message']['content'].strip().lower()
+            if mood in keyword_mapping:
+                return mood
+            for valid_mood in keyword_mapping.keys():
+                if valid_mood in mood:
+                    return valid_mood
     except Exception as e:
         st.warning(f"Error saat menganalisis mood: {str(e)}")
-        
-    if any(word in text_lower for word in ['lelah', 'capek', 'penat', 'stress', 'beban', 'pusing']):
-        return 'tegang'
-    elif any(word in text_lower for word in ['bosan', 'jenuh', 'monoton']):
+    if 'capek' in text_lower or 'rutinitas' in text_lower:
         return 'bosan'
-    elif any(word in text_lower for word in ['sedih', 'kecewa', 'putus asa']):
-        return 'sedih'
-    elif any(word in text_lower for word in ['senang', 'bahagia', 'gembira']):
-        return 'senang'
-    
+    return 'bosan'  
 def classify_text_to_genre(text):
     mood_mapping = {
         'senang': ['Comedy', 'Adventure', 'Animation'],
@@ -154,8 +169,7 @@ def get_similar_movies(movie_title, df):
     cosine_sim = cosine_similarity(tfidf_matrix)
     idx = df[df['title'] == movie_title].index[0]
     sim_scores = list(enumerate(cosine_sim[idx]))
-    sim_scores = sorted(sim_scores, key=
-    return 'bosan'  #lambda x: x[1], reverse=True)
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
     filtered_scores = [i for i in sim_scores[1:] if i[1] > 0.3]
     if not filtered_scores:
         return pd.DataFrame()
@@ -217,7 +231,7 @@ def display_movie_recommendations(recommendations):
                 st.markdown(f"<p style='text-align: center;'>Genre: {movie['genre']}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p style='text-align: center;'>{movie['description'][:150]}...</p>", unsafe_allow_html=True)
     else:
-        st.markdown("<p style='text-align: center;'>Wah Film ini sangat unik dan tidak ada yang mirip! coba film lain/p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center;'>Tidak ditemukan film yang sesuai. Coba kata kunci lain!</p>", unsafe_allow_html=True)
 
 def main():
     col1, col2, col3 = st.columns([2,1,2])    
