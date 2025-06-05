@@ -3,8 +3,16 @@ import pandas as pd
 import requests
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
+from transformers import pipeline
 import warnings
 warnings.filterwarnings('ignore')
+
+# Initialize sentiment pipeline globally
+sentiment_pipeline = pipeline(
+    "sentiment-analysis",
+    model="nlptown/bert-base-multilingual-uncased-sentiment",
+    truncation=True
+)
 
 TMDB_API_KEY = "09064ce99d3e0ce44969ac60940cfe5a"
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
@@ -61,82 +69,38 @@ def load_movie_data():
         return pd.DataFrame(columns=required_columns)
 
 def get_mood_from_openrouter(text):
-    API_URL = "https://openrouter.ai/api/v1/chat/completions"
-    API_KEY = "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"
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:8501",
-        "OpenRouter-Marketplace": "true"
-    }
-    
-    # Pre-check for common mood indicators
     text_lower = text.lower()
     
-    # Specific checks for fatigue/stress related terms
     fatigue_terms = ['lelah', 'capek', 'penat', 'letih', 'lesu', 'stress', 'tertekan', 'beban']
     if any(term in text_lower for term in fatigue_terms):
         return 'tegang'
     
-    # Detailed sentiment analysis prompt
-    analysis_prompt = f"""Analisis sentiment dari teks berikut dan tentukan mood yang paling dominan.
-    
-    Teks: "{text}"
-    
-    Petunjuk analisis:
-    1. Pahami konteks keseluruhan teks, bukan hanya kata kunci
-    2. Perhatikan intensitas emosi yang diekspresikan
-    3. Identifikasi emosi primer dan sekunder
-    4. Pertimbangkan nuansa budaya Indonesia dalam ekspresi emosi
-    
-    Kategorikan ke SATU mood paling dominan berikut:
-    - tegang = untuk stress, tekanan, kelelahan mental/fisik, kekhawatiran intens
-    - sedih = untuk kesedihan, kekecewaan, kehilangan
-    - bosan = HANYA untuk kebosanan murni tanpa stress/tekanan
-    - senang = untuk kegembiraan, kebahagiaan, kepuasan
-    - semangat = untuk motivasi, antusiasme, energi positif
-    - takut = untuk ketakutan, kecemasan
-    - penasaran = untuk keingintahuan, minat
-    - marah = untuk kemarahan, frustrasi, kejengkelan
-    - cinta = untuk perasaan romantis, kasih sayang
-    
-    Berikan jawaban dalam satu kata saja dari opsi di atas:"""
-
     try:
-        response = requests.post(
-            API_URL,
-            headers=headers,
-            json={
-                "model": "mistralai/mistral-7b-instruct:free",
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "Anda adalah pakar psikologi dengan keahlian khusus dalam analisis emosi dan sentiment dalam konteks budaya Indonesia. Berikan analisis mendalam namun ringkas."
-                    },
-                    {
-                        "role": "user",
-                        "content": analysis_prompt
-                    }
-                ],
-                "max_tokens": 10,
-                "temperature": 0.2,
-                "stop": ["\n", ".", ",", "!", "?"]
-            }
-        )
-
-        if response.status_code == 200:
-            result = response.json()
-            mood = result['choices'][0]['message']['content'].strip().lower()
-            valid_moods = ['bosan', 'sedih', 'senang', 'semangat', 'takut',
-                          'penasaran', 'marah', 'cinta', 'tegang']
-
-            if mood in valid_moods:
-                return mood
-
+        result = sentiment_pipeline(text)[0]
+        sentiment_score = int(result['label'][0])  
+        
+        if sentiment_score <= 2:
+            if any(word in text_lower for word in ['takut', 'cemas', 'khawatir']):
+                return 'takut'
+            elif any(word in text_lower for word in ['marah', 'kesal', 'jengkel']):
+                return 'marah'
+            elif any(word in text_lower for word in ['bosan', 'jenuh']):
+                return 'bosan'
+            return 'sedih'
+        elif sentiment_score == 3:
+            if any(word in text_lower for word in ['penasaran', 'ingin tahu']):
+                return 'penasaran'
+            elif any(word in text_lower for word in ['cinta', 'sayang', 'rindu']):
+                return 'cinta'
+            return 'bosan'
+        else: 
+            if any(word in text_lower for word in ['semangat', 'antusias']):
+                return 'semangat'
+            return 'senang'
+            
     except Exception as e:
         st.warning(f"Error saat menganalisis mood: {str(e)}")
         
-    # Fallback analysis based on keywords if API fails
     if any(word in text_lower for word in ['lelah', 'capek', 'penat', 'stress', 'beban', 'pusing']):
         return 'tegang'
     elif any(word in text_lower for word in ['bosan', 'jenuh', 'monoton']):
@@ -146,7 +110,6 @@ def get_mood_from_openrouter(text):
     elif any(word in text_lower for word in ['senang', 'bahagia', 'gembira']):
         return 'senang'
     
-    return 'bosan'  # default fallback
 def classify_text_to_genre(text):
     mood_mapping = {
         'senang': ['Comedy', 'Adventure', 'Animation'],
@@ -191,7 +154,8 @@ def get_similar_movies(movie_title, df):
     cosine_sim = cosine_similarity(tfidf_matrix)
     idx = df[df['title'] == movie_title].index[0]
     sim_scores = list(enumerate(cosine_sim[idx]))
-    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+    sim_scores = sorted(sim_scores, key=
+    return 'bosan'  #lambda x: x[1], reverse=True)
     filtered_scores = [i for i in sim_scores[1:] if i[1] > 0.3]
     if not filtered_scores:
         return pd.DataFrame()
