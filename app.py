@@ -107,7 +107,7 @@ def get_mood_from_openrouter(text):
             json={
                 "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",
                 "messages": [
-                    {"role": "system", "content": "Kamu adalah ahli analisis emosi yang selalu memberikan jawaban singkat satu kata."},
+                    {"role": "system", "content": "Kamu adalah ahli analisis emosi yang memerhatikan input teks dari pengguna, dari teks yang kamu terima kamu dapat menyimpulkan emosi dari pengguna dengan satu kata."},
                     {"role": "user", "content": prompt}
                 ],
                 "max_tokens": 10,
