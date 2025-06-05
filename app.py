@@ -59,7 +59,7 @@ def load_movie_data():
     except Exception as e:
         st.error(f"Error tidak terduga saat memuat dataset: {str(e)}")
         return pd.DataFrame(columns=required_columns)
-    
+
 def get_mood_from_openrouter(text):
     API_URL = "https://openrouter.ai/api/v1/chat/completions"
     API_KEY = "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"
@@ -70,51 +70,63 @@ def get_mood_from_openrouter(text):
         "OpenRouter-Marketplace": "true"
     }
     
-    # Improved sentiment analysis prompt with better context
-    prompt = f"""Analisis emosi dominan dari teks berikut dengan sangat teliti:
-
-Panduan analisis:
-- bosan = hanya jika secara eksplisit menyebut bosan/jenuh
-- lelah/capek = tegang
-- sedih = untuk kesedihan, kekecewaan, atau patah hati
-- senang = untuk kebahagiaan, keceriaan, atau euphoria
-- semangat = untuk antusiasme atau motivasi tinggi
-- takut = untuk ketakutan atau kecemasan
-- penasaran = untuk rasa ingin tahu
-- marah = untuk kemarahan atau frustrasi
-- cinta = untuk perasaan romantis atau kasih sayang
-- tegang = untuk stress, tekanan, atau kelelahan
-
-Teks: {text}
-Emosi dominan (pilih satu kata):"""
-
+    # Analisis sentiment dengan lebih mendalam
+    analysis_prompt = f"""Lakukan analisis sentiment dan emosi dari teks berikut dengan sangat mendalam. 
+    Pertimbangkan:
+    1. Kata-kata yang digunakan
+    2. Konteks kalimat
+    3. Intensitas emosi
+    4. Underlying mood/perasaan yang tersirat
+    
+    Teks: "{text}"
+    
+    Berdasarkan analisis mendalam, kategorikan ke SATU mood yang paling tepat:
+    - tegang = jika ada indikasi stress, tekanan mental, kelelahan fisik/mental, beban pikiran
+    - sedih = jika ada kesedihan, kekecewaan, kehilangan, atau perasaan negatif
+    - bosan = jika murni kebosanan atau kejenuhan tanpa stress
+    - senang = jika ada kegembiraan atau perasaan positif
+    - semangat = jika ada antusiasme atau motivasi
+    - takut = jika ada ketakutan atau kecemasan
+    - penasaran = jika ada keingintahuan
+    - marah = jika ada kemarahan atau frustrasi
+    - cinta = jika ada unsur romantis atau kasih sayang
+    
+    Berikan jawaban dalam satu kata saja (pilih dari opsi di atas):"""    
     try:
+        # Pertama coba analisis sentiment mendalam
         response = requests.post(
             API_URL,
             headers=headers,
             json={
                 "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",
                 "messages": [
-                    {"role": "system", "content": "Kamu adalah ahli psikologi dengan spesialisasi analisis emosi. Berikan analisis yang akurat dan spesifik."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system", 
+                        "content": "Kamu adalah ahli psikologi dan analisis emosi. Berikan analisis mendalam tentang emosi yang dirasakan dari teks."
+                    },
+                    {
+                        "role": "user", 
+                        "content": analysis_prompt
+                    }
                 ],
                 "max_tokens": 10,
-                "temperature": 0.2
+                "temperature": 0.3,
+                "stop": ["\n", ".", ",", "!", "?"]
             }
-        )
+        )        
+        
         if response.status_code == 200:
             result = response.json()
             mood = result['choices'][0]['message']['content'].strip().lower()
             valid_moods = ['bosan', 'sedih', 'senang', 'semangat', 'takut', 
                           'penasaran', 'marah', 'cinta', 'tegang']
+            
             if mood in valid_moods:
                 return mood
-            return 'senang'  
+                
     except Exception as e:
         st.warning(f"Error saat menganalisis mood: {str(e)}")
-    
-    return 'senang' 
-
+    return 'bosan'  
 def classify_text_to_genre(text):
     mood_mapping = {
         'senang': ['Comedy', 'Adventure', 'Animation'],
