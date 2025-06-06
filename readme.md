@@ -7,7 +7,7 @@ CineMatch adalah aplikasi rekomendasi film berbasis AI yang membantu pengguna me
 ## 📌 Fitur Utama
 
 ### 1. Mood Detection via Chatbot
-- Ketikkan perasaan seperti "Aku ingin tertawa bahagia".
+- Ketikkan perasaan seperti "Aku lelah dengan rutinitas harianku".
 - Sistem akan mendeteksi mood dengan OpenRouter AI dan menampilkan film relevan.
 
 ### 2. Similar Movie Recommendation
